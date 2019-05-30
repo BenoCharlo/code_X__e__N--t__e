@@ -22,7 +22,7 @@ xente_test = pd.read_csv("../data/test.csv")
 date_variable="TransactionStartTime"
 
 xente=date_transformer(xente, date_variable)
-xente_test=date_transformer(xente, date_variable)
+xente_test=date_transformer(xente_test, date_variable)
 
 #%%
 train = xente.drop([
@@ -31,7 +31,7 @@ train = xente.drop([
 y = xente.FraudResult
 
 test = xente_test.drop([
-    "FraudResult","TransactionStartTime","CurrencyCode",
+    "TransactionStartTime","CurrencyCode",
     "TransactionId", "CountryCode"],axis=1)
 #%%
 # Data combining
