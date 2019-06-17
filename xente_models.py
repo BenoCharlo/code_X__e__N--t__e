@@ -59,7 +59,7 @@ xente_all = multi_le.fit_transform(xente_all)
 
 xente_all['Value_Not_Amount'] = (xente_all.Amount == xente_all.Value)*1
 
-xente_all['Value_Amount_Diff'] =  np.abs(xente_all.Amount) - xente_all.Value
+xente_all['Value_Amount_Diff'] =  np.abs(xente_all.Amount) - np.abs(xente_all.Value)
 
 #%%
 # Re-separate the data
