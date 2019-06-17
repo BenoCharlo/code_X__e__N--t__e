@@ -71,6 +71,16 @@ test=xente_all.loc[xente_all.is_train==0]
 test.drop("is_train",axis=1,inplace=True)
 
 #%%
+#plt.hist(xente.loc[xente.FraudResult == 1, "Amount"], bins='auto', alpha=0.7, label='1', color='b')
+plt.boxplot(xente.loc[xente.FraudResult == 1, "Amount"]) #bins=20, alpha=0.7, label='0' , color='r'
+plt.title("Histogram of Amount")
+plt.legend(loc='upper right')
+plt.show()
+
+#%%
+plt.boxplot()
+
+#%%
 # Simple Random Forest Classifier
 model_rf = RandomForestClassifier(
     n_estimators=100,
