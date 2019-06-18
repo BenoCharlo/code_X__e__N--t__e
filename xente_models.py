@@ -14,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score, log_loss
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
 
 import lightgbm as lgb
 
@@ -76,9 +77,6 @@ plt.boxplot(xente.loc[xente.FraudResult == 1, "Amount"]) #bins=20, alpha=0.7, la
 plt.title("Histogram of Amount")
 plt.legend(loc='upper right')
 plt.show()
-
-#%%
-plt.boxplot()
 
 #%%
 # Simple Random Forest Classifier
@@ -150,65 +148,41 @@ submission=pd.DataFrame({
 submission.to_csv("../submissions/RF_3.csv",index=False)
 
 #%%
-# Simple Lightgbm
+# Simple Linear Models
 
-TASK        = 'binary' #  'binary'   'regression'
-NB_CLASSES  = 1
+model_lr = LogisticRegression(random_state=0, class_weight="balanced")
 
-features = list(train.columns)
-cat_cols = list(train.drop(["Amount","Value","Value_Amount_Diff"],axis=1).columns)
-
-#%%
-def SCORING_FUN(y_true, y_pred):
-    return round(log_loss(y_true, y_pred), 4)
-
-
-def run_lgb(xtr, ytr, xte, yte, params, f_names, cat_cols, num_rounds=1000, e_s_r = 50):  
-    xtr_dataset = lgb.Dataset(xtr, label=ytr, feature_name=f_names, categorical_feature=cat_cols)
-    xte_dataset = lgb.Dataset(xte, label=yte, feature_name=f_names, categorical_feature=cat_cols)
-    model = lgb.train(params, 
-                      train_set = xtr_dataset, 
-                      num_boost_round = num_rounds,
-                      valid_sets = [xtr_dataset, xte_dataset],
-                      verbose_eval = 50)
-                  
-    pred_yte  = model.predict(xte, num_iteration=model.best_iteration)
-    pred_test = model.predict(test, num_iteration=model.best_iteration) 
-    return pred_yte, pred_test, model
-
-#%%
-lgb_params = {"objective"         : "binary", 
-              "num_class"         : 1, 
-              "num_leaves"        : 30, 
-              "learning_rate"     : 0.1, 
-              "bagging_fraction"  : 0.7, 
-              "feature_fraction"  : 0.5,
-              "bagging_frequency" : 5, 
-              "bagging_seed"      : 2018}
-
-#%%
 nfolds = 5
-test_pred = np.zeros((test.shape[0],))
-pred_oof = np.zeros((train.shape[0],))
+pred_oof = np.zeros((train.shape[0],1))
 scores, times = np.zeros(nfolds), np.zeros(nfolds)
-i=0
-kf= StratifiedKFold(nfolds, shuffle=True, random_state=111)
-for (dev_index, val_index) in kf.split(train, y):
-    print (f'\n==========  starting fold {i+1} =========')
-    t1 = time()       
-    xtr, xte = train[train.index.isin(dev_index)], train[train.index.isin(val_index)]
-    ytr, yte = y[dev_index], y[val_index] 
-    
-    pred, test_pred_cv, model = run_lgb(xtr, ytr, xte, yte, lgb_params, features, cat_cols)
 
-    test_pred += test_pred_cv / nfolds
-    pred_oof[val_index] = pred
-    scores[i], times[i] = SCORING_FUN(yte, pred), round((time()-t1), 0)
+i=0
+kf = StratifiedKFold(nfolds, shuffle=True, random_state=129)
+for (train_index, valid_index) in kf.split(train, y):
+    print(f'======= starting fold {i+1} ========')
+    t1=time()
+    xtr, xte = train[train.index.isin(train_index)], train[train.index.isin(valid_index)]
+    ytr, yte = y[train_index], y[valid_index]
+
+    model_lr.fit(xtr, ytr)
+    pred = model_lr.predict(xtr)
+    test_pred = model_lr.predict(xte)
+    pred_oof[train_index] = np.reshape(pred,(len(train_index),1))
+    scores[i], times[i] = f1_score(yte, test_pred), round((time()-t1), 0)
     print(f'Fold {i+1} | score = {scores[i]} | time = {times[i]} s')
     i+=1
 
-total_score = SCORING_FUN(y, pred_oof)
-print(f'\nTotal score = {total_score} | mean = {round(np.mean(scores), 4)} | std = {round(np.std(scores), 4)}')
+#%%
+model_lr = LogisticRegression(random_state=0).fit(train,y)
+
+test_pred = model_lr.predict(test)
 
 #%%
-lgb.plot_importance(model, figsize=(12, 7), max_num_features=15, importance_type= 'gain')
+submission=pd.DataFrame({
+    "TransactionId":xente_test.TransactionId.tolist(),
+    "FraudResult":list(test_pred)})
+
+submission.to_csv("../submissions/LR_1.csv",index=False)
+
+
+#%%
