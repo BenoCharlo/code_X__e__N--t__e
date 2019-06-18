@@ -173,7 +173,7 @@ for (train_index, valid_index) in kf.split(train, y):
     i+=1
 
 #%%
-model_lr = LogisticRegression(random_state=0).fit(train,y)
+model_lr = LogisticRegression(random_state=0, class_weight='balanced').fit(train,y)
 
 test_pred = model_lr.predict(test)
 
@@ -182,7 +182,6 @@ submission=pd.DataFrame({
     "TransactionId":xente_test.TransactionId.tolist(),
     "FraudResult":list(test_pred)})
 
-submission.to_csv("../submissions/LR_1.csv",index=False)
-
+submission.to_csv("../submissions/LR_2.csv",index=False)
 
 #%%
